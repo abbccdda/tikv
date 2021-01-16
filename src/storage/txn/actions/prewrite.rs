@@ -298,7 +298,7 @@ impl<'a> PrewriteMutation<'a> {
                 lock.short_value = Some(value);
             } else {
                 // value is long
-                txn.put_value(self.key.clone(), self.txn_props.start_ts, value);
+                txn.put_value(self.key.clone(), self.txn_props.start_ts, value, );
             }
         }
 

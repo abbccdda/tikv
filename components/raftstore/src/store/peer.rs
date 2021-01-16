@@ -199,10 +199,13 @@ pub struct ConsistencyState {
     pub hash: Vec<u8>,
 }
 
+type WrittenBytesByLabelMap = HashMap<String, u64>;
+
 /// Statistics about raft peer.
 #[derive(Default, Clone)]
 pub struct PeerStat {
     pub written_bytes: u64,
+    pub written_bytes_by_label: WrittenBytesByLabelMap,
     pub written_keys: u64,
 }
 
@@ -501,6 +504,9 @@ where
     /// reading rocksdb. To avoid unnecessary io operations, we always let the later
     /// task run when there are more than 1 pending tasks.
     pub pending_pd_heartbeat_tasks: Arc<AtomicU64>,
+
+    /// The label for a preferred leader.
+    pub preferred_leader_label: metapb::StoreLabel,
 }
 
 impl<EK, ER> Peer<EK, ER>
@@ -580,7 +586,7 @@ where
             },
             raft_log_size_hint: 0,
             leader_lease: Lease::new(cfg.raft_store_max_leader_lease()),
-            peer_stat: PeerStat::default(),
+            peer_stat: PeerStat{written_bytes_by_label:HashMap::default()},
             catch_up_logs: None,
             bcast_wake_up_time: None,
             replication_mode_version: 0,
@@ -2051,6 +2057,7 @@ where
 
         self.peer_stat.written_keys += apply_metrics.written_keys;
         self.peer_stat.written_bytes += apply_metrics.written_bytes;
+        self.peer_stat.written_bytes_by_label.get(apply_metrics.request_label) += apply_metrics.written_bytes;
         self.delete_keys_hint += apply_metrics.delete_keys_hint;
         let diff = self.size_diff_hint as i64 + apply_metrics.size_diff_hint;
         self.size_diff_hint = cmp::max(diff, 0) as u64;
@@ -2186,6 +2193,14 @@ where
         };
         let is_urgent = is_request_urgent(&req);
 
+        for r in req.get_requests() {
+            match r.get_cmd_type() {
+                CmdType::Prewrite => {
+                    prewrite_size = r.prewrite().value.len()
+                    self.peer_stat.written_bytes_by_label[r.get_request_label()] +=
+                }
+            }
+        }
         let policy = self.inspect(&req);
         let res = match policy {
             Ok(RequestPolicy::ReadLocal) => {
@@ -3228,7 +3243,19 @@ where
         self.approximate_size.is_none() || self.approximate_keys.is_none()
     }
 
+    pub const DOMINANT_WRITER_FRACTION : f64 = 0.8;
+    pub const MINIMUM_ZONE : i32 = 2;
+
     pub fn heartbeat_pd<T>(&mut self, ctx: &PollContext<EK, ER, T>) {
+        let labelOpt = None;
+        for (label, label_written_bytes) in self.peer_stat.written_bytes_by_label {
+            if label_written_bytes / label >= DOMINANT_WRITER_FRACTION &&
+                written_bytes_by_label.len() >= MINIMUM_ZONE {
+                labelOpt = Some(label);
+                break
+            }
+        }
+
         let task = PdTask::Heartbeat(HeartbeatTask {
             term: self.term(),
             region: self.region().clone(),
@@ -3237,6 +3264,7 @@ where
             pending_peers: self.collect_pending_peers(ctx),
             written_bytes: self.peer_stat.written_bytes,
             written_keys: self.peer_stat.written_keys,
+            preferred_region_label: labelOpt,
             approximate_size: self.approximate_size.unwrap_or_default(),
             approximate_keys: self.approximate_keys.unwrap_or_default(),
             replication_status: self.region_replication_status(),

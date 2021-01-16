@@ -56,6 +56,8 @@ command! {
             /// When the transaction involves only one region, it's possible to commit the
             /// transaction directly with 1PC protocol.
             try_one_pc: bool,
+            /// Request label to indicate which tidb-server sends the request
+            request_label: Option<metapb::StoreLabel>,
         }
 }
 
@@ -161,6 +163,7 @@ impl Prewrite {
 
             primary: self.primary,
             secondary_keys: self.secondary_keys,
+            request_label: self.request_label,
 
             ctx: self.ctx,
             old_values: OldValues::default(),
@@ -228,6 +231,8 @@ command! {
             /// When the transaction involves only one region, it's possible to commit the
             /// transaction directly with 1PC protocol.
             try_one_pc: bool,
+            /// Request Label to indicate which tidb-server sends the request
+            request_label: Option<metapb::StoreLabel>,
         }
 }
 
@@ -292,6 +297,7 @@ impl PrewritePessimistic {
             lock_ttl: self.lock_ttl,
             min_commit_ts: self.min_commit_ts,
             max_commit_ts: self.max_commit_ts,
+            request_label: self.request_label,
 
             ctx: self.ctx,
             old_values: OldValues::default(),
@@ -343,6 +349,7 @@ struct Prewriter<K: PrewriteKind> {
     secondary_keys: Option<Vec<Vec<u8>>>,
     old_values: OldValues,
     try_one_pc: bool,
+    request_label: Option<metapb::StoreLabel>,
 
     ctx: Context,
 }

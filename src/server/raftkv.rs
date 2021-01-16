@@ -280,6 +280,7 @@ where
         let mut cmd = RaftCmdRequest::default();
         cmd.set_header(header);
         cmd.set_requests(reqs.into());
+        cmd.set_request_label(reqs.get(0).)
 
         if let Some(tx) = self.txn_extra_scheduler.as_ref() {
             if !txn_extra.is_empty() {
@@ -408,7 +409,7 @@ where
                     req.set_cmd_type(CmdType::Delete);
                     req.set_delete(delete);
                 }
-                Modify::Put(cf, k, v) => {
+                Modify::Put(cf, k, v, l) => {
                     let mut put = PutRequest::default();
                     put.set_key(k.into_encoded());
                     put.set_value(v);
@@ -417,6 +418,7 @@ where
                     }
                     req.set_cmd_type(CmdType::Put);
                     req.set_put(put);
+                    req.set_request_label(l);
                 }
                 Modify::DeleteRange(cf, start_key, end_key, notify_only) => {
                     let mut delete_range = DeleteRangeRequest::default();

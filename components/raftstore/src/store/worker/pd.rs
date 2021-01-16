@@ -85,6 +85,7 @@ pub struct HeartbeatTask {
     pub approximate_size: u64,
     pub approximate_keys: u64,
     pub replication_status: Option<RegionReplicationStatus>,
+    pub preferred_region_label: Option<metapb::StoreLabel>,
 }
 
 /// Uses an asynchronous thread to tell PD something.
@@ -1143,6 +1144,7 @@ where
                         approximate_size: hb_task.approximate_size,
                         approximate_keys: hb_task.approximate_keys,
                         last_report_ts,
+                        preferred_region_label: hb_task.preferred_region_label.get,
                     },
                     hb_task.replication_status,
                 )

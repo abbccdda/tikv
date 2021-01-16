@@ -53,6 +53,7 @@ pub struct RegionStat {
     pub approximate_size: u64,
     pub approximate_keys: u64,
     pub last_report_ts: UnixSecs,
+    pub preferred_region_label: metapb::StoreLabel,
 }
 
 #[derive(Clone, Debug, PartialEq)]

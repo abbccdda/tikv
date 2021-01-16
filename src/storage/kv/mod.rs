@@ -62,7 +62,7 @@ impl CbContext {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Modify {
     Delete(CfName, Key),
-    Put(CfName, Key, Value),
+    Put(CfName, Key, Value, Label),
     // cf_name, start_key, end_key, notify_only
     DeleteRange(CfName, Key, Key, bool),
 }
@@ -78,7 +78,7 @@ impl Modify {
 
         match self {
             Modify::Delete(_, k) => cf_size + k.as_encoded().len(),
-            Modify::Put(_, k, v) => cf_size + k.as_encoded().len() + v.len(),
+            Modify::Put(_, k, v, l) => cf_size + k.as_encoded().len() + v.len(),
             Modify::DeleteRange(..) => unreachable!(),
         }
     }

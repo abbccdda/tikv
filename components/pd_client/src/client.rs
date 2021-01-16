@@ -498,6 +498,7 @@ impl PdClient for RpcClient {
         req.set_keys_read(region_stat.read_keys);
         req.set_approximate_size(region_stat.approximate_size);
         req.set_approximate_keys(region_stat.approximate_keys);
+        req.set_preferred_location_label(region_stat.preferred_region_label);
         if let Some(s) = replication_status {
             req.set_replication_status(s);
         }

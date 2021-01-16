@@ -359,6 +359,8 @@ where
     /// Used for handling race between splitting and creating new peer.
     /// An uninitialized peer can be replaced to the one from splitting iff they are exactly the same peer.
     pending_create_peers: Arc<Mutex<HashMap<u64, (u64, bool)>>>,
+
+    requestLabel: Option<metapb::StoreLabel>,
 }
 
 impl<EK, W> ApplyContext<EK, W>
@@ -405,6 +407,7 @@ where
             yield_duration: cfg.apply_yield_duration.0,
             store_id,
             pending_create_peers,
+            requestLabel: None,
         }
     }
 
@@ -773,6 +776,8 @@ where
 
     /// The local metrics, and it will be flushed periodically.
     metrics: ApplyMetrics,
+
+    requestLabel: metapb::StoreLabel,
 }
 
 impl<EK> ApplyDelegate<EK>
@@ -886,6 +891,7 @@ where
     fn update_metrics<W: WriteBatch<EK>>(&mut self, apply_ctx: &ApplyContext<EK, W>) {
         self.metrics.written_bytes += apply_ctx.delta_bytes();
         self.metrics.written_keys += apply_ctx.delta_keys();
+        self.requestLabel = apply_ctx.requestLabel.get
     }
 
     fn write_apply_state<W: WriteBatch<EK>>(&self, wb: &mut W) {
@@ -1051,6 +1057,8 @@ where
         if let ApplyResult::WaitMergeSource(_) = exec_result {
             return exec_result;
         }
+
+        apply_ctx.apply_res cmd.get_request_label()
 
         debug!(
             "applied command";
@@ -1285,6 +1293,7 @@ where
 
         let requests = req.get_requests();
         let mut responses = Vec::with_capacity(requests.len());
+        ctx.requestLabel = Some(req.get_request_label());
 
         let mut ranges = vec![];
         let mut ssts = vec![];
@@ -2926,6 +2935,7 @@ pub struct ApplyMetrics {
     pub written_bytes: u64,
     pub written_keys: u64,
     pub lock_cf_written_bytes: u64,
+    pub request_label: metapb::StoreLabel,
 }
 
 #[derive(Debug)]

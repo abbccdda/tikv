@@ -220,8 +220,8 @@ impl<S: Snapshot> MvccTxn<S> {
         Some(released)
     }
 
-    pub(crate) fn put_value(&mut self, key: Key, ts: TimeStamp, value: Value) {
-        let write = Modify::Put(CF_DEFAULT, key.append_ts(ts), value);
+    pub(crate) fn put_value(&mut self, key: Key, ts: TimeStamp, value: Value, label: metapb::StoreLabel) {
+        let write = Modify::Put(CF_DEFAULT, key.append_ts(ts), value, label);
         self.write_size += write.size();
         self.modifies.push(write);
     }
